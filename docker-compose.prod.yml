@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: meeting_rooms
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-armoff122}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d meeting_rooms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - meeting-network
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-admin}:${DB_PASSWORD:-armoff122}@postgres:5432/meeting_rooms
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-armboy122}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://meeting-room.akin.love}
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - meeting-network
+
+volumes:
+  postgres_data:
+
+networks:
+  meeting-network:
+    driver: bridge 
