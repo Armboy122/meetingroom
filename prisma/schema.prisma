@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Room {
+  roomId      Int       @id @default(autoincrement()) @map("room_id")
+  roomName    String    @map("room_name") @db.VarChar(100)
+  capacity    Int       @default(10)
+  equipment   String?
+  status      String    @default("active") @db.VarChar(20)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  bookings    Booking[]
+
+  @@map("rooms")
+}
+
+model Booking {
+  bookingId     String        @id @default(cuid()) @map("booking_id")
+  roomId        Int           @map("room_id")
+  title         String        @db.VarChar(200)
+  description   String?
+  startDatetime DateTime      @map("start_datetime")
+  endDatetime   DateTime      @map("end_datetime")
+  createdBy     String        @map("created_by") @db.VarChar(100)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  status        String        @default("confirmed") @db.VarChar(20)
+  room          Room          @relation(fields: [roomId], references: [roomId])
+  participants  Participant[]
+
+  @@map("bookings")
+}
+
+model Participant {
+  participantId    String   @id @default(cuid()) @map("participant_id")
+  bookingId        String   @map("booking_id")
+  participantName  String   @map("participant_name") @db.VarChar(100)
+  participantEmail String?  @map("participant_email") @db.VarChar(150)
+  addedAt          DateTime @default(now()) @map("added_at")
+  booking          Booking  @relation(fields: [bookingId], references: [bookingId], onDelete: Cascade)
+
+  @@map("participants")
+}
