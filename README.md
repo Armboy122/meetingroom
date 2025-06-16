@@ -33,35 +33,38 @@ A modern meeting room booking system built with Next.js 14, TypeScript, Prisma, 
 - **ห้องประชุมพัทยา** - 20 people (2 Projectors, Large sound system, 2 Whiteboards, Wi-Fi)
 - **ห้องประชุมเกาะสมุย** - 4 people (32" Monitor, Wi-Fi)
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - Docker & Docker Compose
-- Node.js 18+ (for local development)
 
-### Running with Docker (Recommended)
+### Production Deployment
 
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd meeting-room-booking
+   cd meetingroom
    ```
 
 2. Start the application:
    ```bash
-   docker-compose up -d
+   docker-compose up -d --build
    ```
 
 3. Wait for the containers to start, then visit:
    - **Application**: http://localhost:3000
-   - **Database**: PostgreSQL on port 5433
+   - **Database**: PostgreSQL on port 5432
 
-4. Initialize the database (first time only):
-   ```bash
-   docker-compose exec app npm run db:push
-   docker-compose exec app npm run db:seed
-   ```
+**That's it!** The system will automatically:
+- ✅ Initialize the database
+- ✅ Seed with 6 meeting rooms
+- ✅ Start the application
+
+### Update the project:
+```bash
+git pull && docker-compose up -d --build
+```
 
 ### Local Development
 

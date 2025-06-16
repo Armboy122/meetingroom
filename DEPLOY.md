@@ -6,7 +6,7 @@
 
 อัปโหลดไฟล์เหล่านี้ไปยังเซิร์ฟเวอร์:
 - `Dockerfile`
-- `docker-compose.prod.yml`
+- `docker-compose.yml`
 - `entrypoint.sh`
 - `package.json`
 - `package-lock.json`
@@ -17,7 +17,7 @@
 - `tailwind.config.js`
 - `postcss.config.js`
 
-### 2. ตั้งค่า Environment Variables
+### 2. ตั้งค่า Environment Variables (ถ้าต้องการปรับแต่ง)
 
 สร้างไฟล์ `.env` (copy จาก `env.example`):
 ```bash
@@ -25,23 +25,24 @@ cp env.example .env
 nano .env
 ```
 
-แก้ไขค่าเหล่านี้:
-- `DB_PASSWORD`: รหัสผ่านฐานข้อมูลที่ปลอดภัย
-- `NEXTAUTH_SECRET`: สุ่ม secret key ยาวๆ
-- `NEXTAUTH_URL`: URL ของเว็บไซต์จริง
-- `APP_PORT`: port ที่ต้องการใช้
+**หรือไม่ต้องสร้าง .env ก็ได้** ระบบจะใช้ค่า default:
+- DB_PASSWORD: `armoff122`
+- NEXTAUTH_SECRET: `armboy122`
+- NEXTAUTH_URL: `https://meeting-room.akin.love`
+- APP_PORT: `3000`
+- DB_PORT: `5432`
 
 ### 3. รันในเซิร์ฟเวอร์
 
 ```bash
 # สร้างและรัน containers
-docker-compose -f docker-compose.prod.yml up -d --build
+docker-compose up -d --build
 
 # ตรวจสอบสถานะ
-docker-compose -f docker-compose.prod.yml ps
+docker-compose ps
 
 # ดู logs
-docker-compose -f docker-compose.prod.yml logs -f app
+docker-compose logs -f app
 ```
 
 ### 4. การอัปเดต
@@ -51,7 +52,7 @@ docker-compose -f docker-compose.prod.yml logs -f app
 git pull
 
 # Rebuild และ restart
-docker-compose -f docker-compose.prod.yml up -d --build
+docker-compose up -d --build
 
 # ทำความสะอาด images เก่า
 docker image prune -f
@@ -61,10 +62,10 @@ docker image prune -f
 
 ```bash
 # Backup
-docker-compose -f docker-compose.prod.yml exec postgres pg_dump -U admin meeting_rooms > backup.sql
+docker-compose exec postgres pg_dump -U admin meeting_rooms > backup.sql
 
 # Restore
-docker-compose -f docker-compose.prod.yml exec -T postgres psql -U admin meeting_rooms < backup.sql
+docker-compose exec -T postgres psql -U admin meeting_rooms < backup.sql
 ```
 
 ## Features ของ Production Setup
@@ -77,8 +78,21 @@ docker-compose -f docker-compose.prod.yml exec -T postgres psql -U admin meeting
 ✅ **Network Isolation**: แยก network สำหรับความปลอดภัย
 ✅ **Optimized Image**: ลดขนาด Docker image
 
+## การใช้งานแบบง่าย
+
+### ครั้งแรก:
+```bash
+docker-compose up -d --build
+```
+
+### อัปเดตโปรเจค:
+```bash
+git pull && docker-compose up -d --build
+```
+
 ## หมายเหตุ
 
 - ครั้งแรกที่รันจะใช้เวลานานเล็กน้อยเพื่อ build image และ seed database
 - หลังจากนั้นจะเริ่มได้เร็วขึ้น
-- Database จะถูกเก็บใน Docker volume ดังนั้นข้อมูลจะไม่หายแม้ restart container 
+- Database จะถูกเก็บใน Docker volume ดังนั้นข้อมูลจะไม่หายแม้ restart container
+- ไม่จำเป็นต้องสร้างไฟล์ .env หากใช้ค่า default 
