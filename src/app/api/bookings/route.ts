@@ -8,7 +8,11 @@ const BookingSchema = z.object({
   description: z.string().optional(),
   startDatetime: z.string().datetime(),
   endDatetime: z.string().datetime(),
-  createdBy: z.string().min(1).max(100),
+  createdBy: z.string().min(1).max(100).optional(),
+  organizerId: z.string().optional(),
+  needsRefreshment: z.boolean().default(false),
+  refreshmentSets: z.number().int().min(1).optional(),
+  refreshmentNote: z.string().optional(),
   participants: z.array(z.object({
     participantName: z.string().min(1).max(100),
     participantEmail: z.string().email().optional()
@@ -22,7 +26,7 @@ export async function GET(request: NextRequest) {
     const roomId = searchParams.get('roomId')
 
     let whereClause: any = {
-      status: 'confirmed'
+      status: { in: ['approved', 'confirmed'] }
     }
 
     if (date) {
@@ -77,10 +81,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check for conflicts with approved bookings only
     const conflictingBooking = await prisma.booking.findFirst({
       where: {
         roomId: validatedData.roomId,
-        status: 'confirmed',
+        status: { in: ['approved', 'confirmed'] },
         OR: [
           {
             AND: [
@@ -111,6 +116,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate refreshment data
+    if (validatedData.needsRefreshment && !validatedData.refreshmentSets) {
+      return NextResponse.json(
+        { error: 'Number of refreshment sets is required when refreshment is needed' },
+        { status: 400 }
+      )
+    }
+
     const booking = await prisma.booking.create({
       data: {
         roomId: validatedData.roomId,
@@ -119,12 +132,18 @@ export async function POST(request: NextRequest) {
         startDatetime: startTime,
         endDatetime: endTime,
         createdBy: validatedData.createdBy,
+        organizerId: validatedData.organizerId,
+        needsRefreshment: validatedData.needsRefreshment,
+        refreshmentSets: validatedData.needsRefreshment ? validatedData.refreshmentSets : null,
+        refreshmentNote: validatedData.refreshmentNote,
+        status: 'pending',
         participants: validatedData.participants ? {
           create: validatedData.participants
         } : undefined
       },
       include: {
         room: true,
+        organizer: true,
         participants: true
       }
     })

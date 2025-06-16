@@ -51,6 +51,9 @@ const bookingSchema = z.object({
   startDatetime: z.date(),
   endDatetime: z.date(),
   createdBy: z.string().min(1, 'Created by is required').max(100),
+  needsRefreshment: z.boolean().default(false),
+  refreshmentSets: z.number().int().min(1).optional(),
+  refreshmentNote: z.string().optional(),
 })
 
 type BookingFormData = z.infer<typeof bookingSchema>
@@ -78,6 +81,7 @@ export default function BookingModal({
   } = useForm<BookingFormData>()
 
   const watchedRoomId = watch('roomId')
+  const watchedNeedsRefreshment = watch('needsRefreshment')
 
   useEffect(() => {
     if (open) {
@@ -119,6 +123,9 @@ export default function BookingModal({
           startDatetime: data.startDatetime.toISOString(),
           endDatetime: data.endDatetime.toISOString(),
           participants: participants.length > 0 ? participants : undefined,
+          needsRefreshment: data.needsRefreshment,
+          refreshmentSets: data.needsRefreshment ? data.refreshmentSets : undefined,
+          refreshmentNote: data.refreshmentNote,
         }),
       })
 
@@ -251,6 +258,48 @@ export default function BookingModal({
                 <p className="text-red-500 text-sm">{errors.endDatetime.message}</p>
               )}
             </div>
+          </div>
+
+          <div className="space-y-4 p-4 bg-orange-50 border border-orange-200 rounded-md">
+            <h3 className="font-semibold text-orange-900">การเตรียมขนมเบรก</h3>
+            
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="needsRefreshment"
+                {...register('needsRefreshment')}
+                className="rounded border-gray-300"
+              />
+              <Label htmlFor="needsRefreshment">ต้องการขนมเบรก</Label>
+            </div>
+
+            {watchedNeedsRefreshment && (
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="refreshmentSets">จำนวนชุดขนมเบรก *</Label>
+                  <Input
+                    id="refreshmentSets"
+                    type="number"
+                    min="1"
+                    {...register('refreshmentSets', { valueAsNumber: true })}
+                    placeholder="เช่น 10"
+                  />
+                  {errors.refreshmentSets && (
+                    <p className="text-red-500 text-sm">{errors.refreshmentSets.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="refreshmentNote">หมายเหตุขนมเบรก</Label>
+                  <Textarea
+                    id="refreshmentNote"
+                    {...register('refreshmentNote')}
+                    placeholder="เช่น ไม่ใส่น้ำตาล, มีผู้แพ้อาหาร, เป็นต้น"
+                    rows={2}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <ParticipantManager

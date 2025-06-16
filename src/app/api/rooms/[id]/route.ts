@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateAdminPassword } from '@/lib/admin'
 
 // GET - ดึงข้อมูลห้องประชุมเฉพาะ
 export async function GET(
@@ -56,7 +57,8 @@ export async function PUT(
     const { roomName, capacity, equipment, adminPassword } = await request.json()
 
     // ตรวจสอบรหัสผ่าน admin
-    if (adminPassword !== 'Armoff122*') {
+    const isValidPassword = await validateAdminPassword(adminPassword)
+    if (!isValidPassword) {
       return NextResponse.json({ error: 'รหัสผ่าน Admin ไม่ถูกต้อง' }, { status: 401 })
     }
 
@@ -115,7 +117,8 @@ export async function DELETE(
     const { adminPassword } = await request.json()
 
     // ตรวจสอบรหัสผ่าน admin
-    if (adminPassword !== 'Armoff122*') {
+    const isValidPassword = await validateAdminPassword(adminPassword)
+    if (!isValidPassword) {
       return NextResponse.json({ error: 'รหัสผ่าน Admin ไม่ถูกต้อง' }, { status: 401 })
     }
 
