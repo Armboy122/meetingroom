@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { format, addDays, subDays } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ChevronLeft, ChevronRight, Calendar, Grid, Settings } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, Grid, Settings, History } from 'lucide-react'
 import BookingCalendar from '@/components/BookingCalendar'
 import BookingModal from '@/components/BookingModal'
 import RoomGrid from '@/components/RoomGrid'
@@ -104,6 +104,14 @@ export default function HomePage() {
           >
             <Grid className="h-4 w-4 mr-2" />
             Grid
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.href = '/history'}
+          >
+            <History className="h-4 w-4 mr-2" />
+            ประวัติ
           </Button>
           <Button
             variant="outline"
