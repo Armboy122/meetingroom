@@ -30,6 +30,21 @@ interface Room {
   equipment?: string
 }
 
+interface User {
+  userId: string
+  employeeId: string
+  fullName: string
+  departmentId: string
+  divisionId: string
+  email?: string
+  department?: {
+    departmentName: string
+  }
+  division?: {
+    divisionName: string
+  }
+}
+
 interface Participant {
   participantName: string
   participantEmail?: string
@@ -48,9 +63,10 @@ const bookingSchema = z.object({
   roomId: z.number(),
   title: z.string().min(1, 'Title is required').max(200),
   description: z.string().optional(),
-  startDatetime: z.date(),
-  endDatetime: z.date(),
-  createdBy: z.string().min(1, 'Created by is required').max(100),
+  bookingDate: z.string().min(1, 'Date is required'),
+  startTime: z.string().min(1, 'Start time is required'),
+  endTime: z.string().min(1, 'End time is required'),
+  organizerId: z.string().min(1, 'Organizer is required'),
   needsRefreshment: z.boolean().default(false),
   refreshmentSets: z.number().int().min(1).optional(),
   refreshmentNote: z.string().optional(),
@@ -67,9 +83,24 @@ export default function BookingModal({
   onBookingCreated
 }: BookingModalProps) {
   const [rooms, setRooms] = useState<Room[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [participants, setParticipants] = useState<Participant[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Generate time slots (8:00 AM to 6:00 PM, 30-minute intervals)
+  const generateTimeSlots = () => {
+    const slots = []
+    for (let hour = 8; hour < 18; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+        slots.push(timeString)
+      }
+    }
+    return slots
+  }
+
+  const timeSlots = generateTimeSlots()
 
   const {
     register,
@@ -82,18 +113,27 @@ export default function BookingModal({
 
   const watchedRoomId = watch('roomId')
   const watchedNeedsRefreshment = watch('needsRefreshment')
+  const watchedStartTime = watch('startTime')
+  const watchedBookingDate = watch('bookingDate')
 
   useEffect(() => {
     if (open) {
       fetchRooms()
+      fetchUsers()
       if (selectedRoomId) {
         setValue('roomId', selectedRoomId)
       }
       if (selectedStartTime) {
-        setValue('startDatetime', selectedStartTime)
+        // Extract date and time from selectedStartTime
+        const date = format(selectedStartTime, 'yyyy-MM-dd')
+        const time = format(selectedStartTime, 'HH:mm')
+        setValue('bookingDate', date)
+        setValue('startTime', time)
       }
       if (selectedEndTime) {
-        setValue('endDatetime', selectedEndTime)
+        // Extract time from selectedEndTime
+        const time = format(selectedEndTime, 'HH:mm')
+        setValue('endTime', time)
       }
     }
   }, [open, selectedRoomId, selectedStartTime, selectedEndTime, setValue])
@@ -108,30 +148,52 @@ export default function BookingModal({
     }
   }
 
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users')
+      const data = await response.json()
+      setUsers(data)
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    }
+  }
+
   const onSubmit = async (data: BookingFormData) => {
     setLoading(true)
     setError(null)
 
     try {
+      // Combine date and time to create datetime objects
+      const startDatetime = new Date(`${data.bookingDate}T${data.startTime}:00`)
+      const endDatetime = new Date(`${data.bookingDate}T${data.endTime}:00`)
+
+      const requestData = {
+        roomId: data.roomId,
+        title: data.title,
+        description: data.description,
+        startDatetime: startDatetime.toISOString(),
+        endDatetime: endDatetime.toISOString(),
+        organizerId: data.organizerId,
+        participants: participants.length > 0 ? participants : undefined,
+        needsRefreshment: data.needsRefreshment,
+        refreshmentSets: data.needsRefreshment ? data.refreshmentSets : undefined,
+        refreshmentNote: data.refreshmentNote,
+      }
+
+      console.log('Creating booking with data:', requestData)
+
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...data,
-          startDatetime: data.startDatetime.toISOString(),
-          endDatetime: data.endDatetime.toISOString(),
-          participants: participants.length > 0 ? participants : undefined,
-          needsRefreshment: data.needsRefreshment,
-          refreshmentSets: data.needsRefreshment ? data.refreshmentSets : undefined,
-          refreshmentNote: data.refreshmentNote,
-        }),
+        body: JSON.stringify(requestData),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create booking')
+        console.error('Booking creation failed:', errorData)
+        throw new Error(errorData.message || errorData.error || 'Failed to create booking')
       }
 
       onBookingCreated()
@@ -166,30 +228,16 @@ export default function BookingModal({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Meeting Title *</Label>
-              <Input
-                id="title"
-                {...register('title')}
-                placeholder="Enter meeting title"
-              />
-              {errors.title && (
-                <p className="text-red-500 text-sm">{errors.title.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="createdBy">Organizer *</Label>
-              <Input
-                id="createdBy"
-                {...register('createdBy')}
-                placeholder="Your name"
-              />
-              {errors.createdBy && (
-                <p className="text-red-500 text-sm">{errors.createdBy.message}</p>
-              )}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="title">Meeting Title *</Label>
+            <Input
+              id="title"
+              {...register('title')}
+              placeholder="Enter meeting title"
+            />
+            {errors.title && (
+              <p className="text-red-500 text-sm">{errors.title.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -234,28 +282,81 @@ export default function BookingModal({
             </div>
           )}
 
+          {/* Organizer Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="organizerId">ผู้จัด (Organizer) *</Label>
+            <Select onValueChange={(value) => setValue('organizerId', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกผู้จัดการประชุม" />
+              </SelectTrigger>
+              <SelectContent>
+                {users.map((user) => (
+                  <SelectItem key={user.userId} value={user.userId}>
+                    {user.fullName} ({user.employeeId}) - {user.department?.departmentName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.organizerId && (
+              <p className="text-red-500 text-sm">{errors.organizerId.message}</p>
+            )}
+          </div>
+
+          {/* Date Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="bookingDate">วันที่ *</Label>
+            <Input
+              id="bookingDate"
+              type="date"
+              {...register('bookingDate')}
+            />
+            {errors.bookingDate && (
+              <p className="text-red-500 text-sm">{errors.bookingDate.message}</p>
+            )}
+          </div>
+
+          {/* Time Selection */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startDatetime">Start Time *</Label>
-              <Input
-                id="startDatetime"
-                type="datetime-local"
-                {...register('startDatetime', { valueAsDate: true })}
-              />
-              {errors.startDatetime && (
-                <p className="text-red-500 text-sm">{errors.startDatetime.message}</p>
+              <Label htmlFor="startTime">เวลาเริ่ม *</Label>
+              <Select onValueChange={(value) => setValue('startTime', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกเวลาเริ่ม" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeSlots.map((time) => (
+                    <SelectItem key={time} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.startTime && (
+                <p className="text-red-500 text-sm">{errors.startTime.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="endDatetime">End Time *</Label>
-              <Input
-                id="endDatetime"
-                type="datetime-local"
-                {...register('endDatetime', { valueAsDate: true })}
-              />
-              {errors.endDatetime && (
-                <p className="text-red-500 text-sm">{errors.endDatetime.message}</p>
+              <Label htmlFor="endTime">เวลาสิ้นสุด *</Label>
+              <Select onValueChange={(value) => setValue('endTime', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="เลือกเวลาสิ้นสุด" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeSlots.filter(time => {
+                    if (!watchedStartTime) return true
+                    const startIndex = timeSlots.indexOf(watchedStartTime)
+                    const currentIndex = timeSlots.indexOf(time)
+                    return currentIndex > startIndex
+                  }).map((time) => (
+                    <SelectItem key={time} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.endTime && (
+                <p className="text-red-500 text-sm">{errors.endTime.message}</p>
               )}
             </div>
           </div>
@@ -305,6 +406,7 @@ export default function BookingModal({
           <ParticipantManager
             participants={participants}
             onParticipantsChange={setParticipants}
+            users={users}
           />
 
           <div className="flex justify-end space-x-3 pt-4">

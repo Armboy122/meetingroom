@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { format, addDays, subDays } from 'date-fns'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { ChevronLeft, ChevronRight, Calendar, Grid, Settings } from 'lucide-react'
 import BookingCalendar from '@/components/BookingCalendar'
 import BookingModal from '@/components/BookingModal'
@@ -28,6 +29,12 @@ export default function HomePage() {
 
   const goToToday = () => {
     setSelectedDate(new Date())
+  }
+
+  const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.value) {
+      setSelectedDate(new Date(event.target.value))
+    }
   }
 
   const handleTimeSlotClick = (roomId: number, startTime: Date, endTime: Date) => {
@@ -62,15 +69,23 @@ export default function HomePage() {
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button variant="outline" onClick={goToToday}>
-              Today
+              วันนี้
             </Button>
             <Button variant="outline" size="sm" onClick={goToNextDay}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <h2 className="text-xl font-semibold">
-            {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-          </h2>
+          <div className="flex items-center space-x-3">
+            <Input
+              type="date"
+              value={format(selectedDate, 'yyyy-MM-dd')}
+              onChange={handleDateChange}
+              className="w-auto"
+            />
+            <h2 className="text-lg font-semibold text-gray-700">
+              {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+            </h2>
+          </div>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -93,10 +108,10 @@ export default function HomePage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open('/settings', '_blank')}
+            onClick={() => window.location.href = '/settings'}
           >
             <Settings className="h-4 w-4 mr-2" />
-            Settings
+            การตั้งค่า
           </Button>
         </div>
       </div>

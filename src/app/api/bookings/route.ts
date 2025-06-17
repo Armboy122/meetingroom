@@ -4,18 +4,18 @@ import { z } from 'zod'
 
 const BookingSchema = z.object({
   roomId: z.number(),
-  title: z.string().min(1).max(200),
+  title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
   description: z.string().optional(),
-  startDatetime: z.string().datetime(),
-  endDatetime: z.string().datetime(),
+  startDatetime: z.string().datetime('Invalid datetime format'),
+  endDatetime: z.string().datetime('Invalid datetime format'),
   createdBy: z.string().min(1).max(100).optional(),
-  organizerId: z.string().optional(),
+  organizerId: z.string().min(1, 'Organizer is required'),
   needsRefreshment: z.boolean().default(false),
-  refreshmentSets: z.number().int().min(1).optional(),
+  refreshmentSets: z.number().int().min(1, 'Refreshment sets must be at least 1').optional(),
   refreshmentNote: z.string().optional(),
   participants: z.array(z.object({
-    participantName: z.string().min(1).max(100),
-    participantEmail: z.string().email().optional()
+    participantName: z.string().min(1, 'Participant name is required').max(100, 'Participant name must be less than 100 characters'),
+    participantEmail: z.string().email('Invalid email format').optional()
   })).optional()
 })
 
@@ -151,15 +151,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(booking, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors)
+      const errorMessage = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
       return NextResponse.json(
-        { error: 'Invalid data', details: error.errors },
+        { 
+          error: 'Invalid data', 
+          message: errorMessage,
+          details: error.errors 
+        },
         { status: 400 }
       )
     }
 
     console.error('Error creating booking:', error)
     return NextResponse.json(
-      { error: 'Failed to create booking' },
+      { error: 'Failed to create booking', message: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
