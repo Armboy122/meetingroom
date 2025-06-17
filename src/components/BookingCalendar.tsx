@@ -19,6 +19,7 @@ interface Booking {
   title: string
   startDatetime: string
   endDatetime: string
+  status: string
   room: Room
   bookingTitle?: string
   description?: string
@@ -129,6 +130,29 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
 
   return (
     <>
+      {/* Legend */}
+      <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+        <h3 className="text-sm font-semibold mb-2">สถานะการจอง:</h3>
+        <div className="flex flex-wrap gap-4 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-100 border rounded"></div>
+            <span>ว่าง</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-yellow-100 border rounded"></div>
+            <span>รอการอนุมัติ</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-100 border rounded"></div>
+            <span>อนุมัติแล้ว</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gray-100 border rounded"></div>
+            <span>ถูกปฏิเสธ</span>
+          </div>
+        </div>
+      </div>
+
       <div className="w-full overflow-x-auto">
         <div className="min-w-full">
           <div className="grid grid-cols-[100px_repeat(6,1fr)] gap-1">
@@ -155,23 +179,66 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
                   const booking = getBookingForSlot(room.roomId, slot)
                   const isBookingStart = booking && isSameMinute(new Date(booking.startDatetime), slot)
 
+                  // กำหนดสีตามสถานะการจอง
+                  const getStatusColor = (status: string) => {
+                    switch (status) {
+                      case 'pending':
+                        return 'bg-yellow-100 hover:bg-yellow-200'
+                      case 'approved':
+                        return 'bg-red-100 hover:bg-red-200'
+                      case 'rejected':
+                        return 'bg-gray-100 hover:bg-gray-200'
+                      default:
+                        return 'bg-red-100 hover:bg-red-200'
+                    }
+                  }
+
+                  const getStatusBadgeColor = (status: string) => {
+                    switch (status) {
+                      case 'pending':
+                        return 'bg-yellow-500 hover:bg-yellow-600'
+                      case 'approved':
+                        return 'bg-red-500 hover:bg-red-600'
+                      case 'rejected':
+                        return 'bg-gray-500 hover:bg-gray-600'
+                      default:
+                        return 'bg-red-500 hover:bg-red-600'
+                    }
+                  }
+
+                  const getStatusText = (status: string) => {
+                    switch (status) {
+                      case 'pending':
+                        return 'รอการอนุมัติ'
+                      case 'approved':
+                        return 'อนุมัติแล้ว'
+                      case 'rejected':
+                        return 'ถูกปฏิเสธ'
+                      default:
+                        return status
+                    }
+                  }
+
                   return (
                     <div
                       key={slotIndex}
                       className={`h-12 border-b border-r cursor-pointer transition-colors ${
                         isBooked
-                          ? 'bg-red-100 hover:bg-red-200'
+                          ? getStatusColor(booking?.status || 'approved')
                           : 'bg-green-50 hover:bg-green-100'
                       }`}
                       onClick={() => handleSlotClick(room.roomId, slot)}
                       title={isBooked ? 'คลิกเพื่อดูรายละเอียดการจอง' : 'คลิกเพื่อจองห้องประชุม'}
                     >
                       {isBookingStart && booking && (
-                        <div className="p-1 text-xs bg-red-500 text-white rounded m-1 hover:bg-red-600">
+                        <div className={`p-1 text-xs text-white rounded m-1 ${getStatusBadgeColor(booking.status)}`}>
                           <div className="font-semibold truncate">{booking.title}</div>
-                          <div className="opacity-90">
+                          <div className="opacity-90 text-[10px]">
                             {format(new Date(booking.startDatetime), 'HH:mm')} - 
                             {format(new Date(booking.endDatetime), 'HH:mm')}
+                          </div>
+                          <div className="opacity-90 text-[10px] font-medium">
+                            {getStatusText(booking.status)}
                           </div>
                         </div>
                       )}

@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     const roomId = searchParams.get('roomId')
 
     let whereClause: any = {
-      status: { in: ['approved', 'confirmed'] }
+      status: { in: ['pending', 'approved', 'confirmed'] }
     }
 
     if (date) {
