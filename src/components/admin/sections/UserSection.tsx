@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -47,6 +47,10 @@ export function UserSection() {
   const [submitting, setSubmitting] = useState(false)
   const [importing, setImporting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
 
   const fetchUsers = async () => {
     try {
@@ -272,7 +276,6 @@ export function UserSection() {
                   <th className="text-left py-2">ชื่อ-สกุล</th>
                   <th className="text-left py-2">ตำแหน่ง</th>
                   <th className="text-left py-2">สังกัด</th>
-                  <th className="text-left py-2">อีเมล</th>
                   <th className="text-left py-2">การดำเนินการ</th>
                 </tr>
               </thead>
@@ -283,7 +286,6 @@ export function UserSection() {
                     <td className="py-2 font-medium">{user.fullName}</td>
                     <td className="py-2">{user.position || '-'}</td>
                     <td className="py-2">{user.department || '-'}</td>
-                    <td className="py-2">{user.email || '-'}</td>
                     <td className="py-2">
                       <div className="flex gap-1">
                         <Button

@@ -8,8 +8,8 @@ export interface User {
   status?: string
   createdAt?: Date
   updatedAt?: Date
-  department?: Department
-  division?: Division
+  department: string
+  division: string
 }
 
 export interface Department {

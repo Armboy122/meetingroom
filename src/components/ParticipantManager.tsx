@@ -25,12 +25,8 @@ interface User {
   departmentId: string
   divisionId: string
   email?: string
-  department?: {
-    departmentName: string
-  }
-  division?: {
-    divisionName: string
-  }
+  department: string
+  division: string
 }
 
 interface ParticipantManagerProps {
@@ -152,7 +148,7 @@ export function ParticipantManager({ participants, onParticipantsChange, users =
                   .filter(user => !participants.some(p => p.participantName === user.fullName))
                   .map((user) => (
                     <SelectItem key={user.userId} value={user.userId}>
-                      {user.fullName} ({user.employeeId}) - {user.department?.departmentName}
+                      {user.fullName} ({user.employeeId}) - {user.department}
                     </SelectItem>
                   ))}
               </SelectContent>

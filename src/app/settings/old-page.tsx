@@ -228,7 +228,7 @@ export default function SettingsPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/users')
+      const response = await fetch('/api/admin/users')
       if (response.ok) {
         const data = await response.json()
         setUsers(data)
@@ -497,7 +497,7 @@ export default function SettingsPage() {
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/users/${user.userId}`, {
+      const response = await fetch(`/api/admin/users/${user.userId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -1210,7 +1210,7 @@ export default function SettingsPage() {
             setError('')
             setLoading(true)
             try {
-              const url = editingUser ? `/api/users/${editingUser.userId}` : '/api/users'
+              const url = editingUser ? `/api/admin/users/${editingUser.userId}` : '/api/admin/users'
               const method = editingUser ? 'PUT' : 'POST'
               
               const response = await fetch(url, {

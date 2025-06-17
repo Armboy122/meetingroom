@@ -11,7 +11,7 @@ export const useUsers = () => {
   const fetchUsers = useCallback(async () => {
     try {
       setLoadingState({ loading: true, error: null })
-      const response = await fetch('/api/users')
+      const response = await fetch('/api/admin/users')
       
       if (!response.ok) {
         throw new Error('Failed to fetch users')

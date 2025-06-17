@@ -214,7 +214,7 @@ export default function BookingModal({
               <SelectContent>
                 {users.map((user) => (
                   <SelectItem key={user.userId} value={user.userId}>
-                    {user.fullName} ({user.employeeId}) - {user.department?.departmentName}
+                    {user.fullName} ({user.employeeId}) - {user.department}
                   </SelectItem>
                 ))}
               </SelectContent>
