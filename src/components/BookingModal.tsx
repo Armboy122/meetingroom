@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { format } from 'date-fns'
 import { useForm } from 'react-hook-form'
-import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Dialog,
   DialogContent,
@@ -22,57 +22,22 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ParticipantManager } from './ParticipantManager'
+import { useRooms } from '@/hooks/useRooms'
+import { useUsers } from '@/hooks/useUsers'
+import { useBookings } from '@/hooks/useBookings'
+import { generateTimeSlotOptions, combineDateAndTime } from '@/lib/utils/time'
+import { bookingFormSchema } from '@/lib/validation'
+import type { z } from 'zod'
 
-interface Room {
-  roomId: number
-  roomName: string
-  capacity: number
-  equipment?: string
-}
+type BookingFormData = z.infer<typeof bookingFormSchema>
+import { Room, User, Participant, ModalProps } from '@/types'
 
-interface User {
-  userId: string
-  employeeId: string
-  fullName: string
-  departmentId: string
-  divisionId: string
-  email?: string
-  department?: {
-    departmentName: string
-  }
-  division?: {
-    divisionName: string
-  }
-}
-
-interface Participant {
-  participantName: string
-  participantEmail?: string
-}
-
-interface BookingModalProps {
-  open: boolean
-  onClose: () => void
+interface BookingModalProps extends ModalProps {
   selectedRoomId?: number
   selectedStartTime?: Date
   selectedEndTime?: Date
   onBookingCreated: () => void
 }
-
-const bookingSchema = z.object({
-  roomId: z.number(),
-  title: z.string().min(1, 'Title is required').max(200),
-  description: z.string().optional(),
-  bookingDate: z.string().min(1, 'Date is required'),
-  startTime: z.string().min(1, 'Start time is required'),
-  endTime: z.string().min(1, 'End time is required'),
-  organizerId: z.string().min(1, 'Organizer is required'),
-  needsRefreshment: z.boolean().default(false),
-  refreshmentSets: z.number().int().min(1).optional(),
-  refreshmentNote: z.string().optional(),
-})
-
-type BookingFormData = z.infer<typeof bookingSchema>
 
 export default function BookingModal({
   open,
@@ -82,25 +47,17 @@ export default function BookingModal({
   selectedEndTime,
   onBookingCreated
 }: BookingModalProps) {
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [users, setUsers] = useState<User[]>([])
   const [participants, setParticipants] = useState<Participant[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Generate time slots (8:00 AM to 6:00 PM, 30-minute intervals)
-  const generateTimeSlots = () => {
-    const slots = []
-    for (let hour = 8; hour < 18; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-        slots.push(timeString)
-      }
-    }
-    return slots
-  }
+  // Use custom hooks for data fetching
+  const { rooms } = useRooms()
+  const { users } = useUsers()
+  const { createBooking } = useBookings()
 
-  const timeSlots = generateTimeSlots()
+  // Memoize time slots
+  const timeSlots = useMemo(() => generateTimeSlotOptions(), [])
 
   const {
     register,
@@ -116,10 +73,9 @@ export default function BookingModal({
   const watchedStartTime = watch('startTime')
   const watchedBookingDate = watch('bookingDate')
 
+  // Initialize form values when modal opens or props change
   useEffect(() => {
     if (open) {
-      fetchRooms()
-      fetchUsers()
       if (selectedRoomId) {
         setValue('roomId', selectedRoomId)
       }
@@ -138,34 +94,14 @@ export default function BookingModal({
     }
   }, [open, selectedRoomId, selectedStartTime, selectedEndTime, setValue])
 
-  const fetchRooms = async () => {
-    try {
-      const response = await fetch('/api/rooms')
-      const data = await response.json()
-      setRooms(data)
-    } catch (error) {
-      console.error('Error fetching rooms:', error)
-    }
-  }
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch('/api/users')
-      const data = await response.json()
-      setUsers(data)
-    } catch (error) {
-      console.error('Error fetching users:', error)
-    }
-  }
-
   const onSubmit = async (data: BookingFormData) => {
     setLoading(true)
     setError(null)
 
     try {
-      // Combine date and time to create datetime objects
-      const startDatetime = new Date(`${data.bookingDate}T${data.startTime}:00`)
-      const endDatetime = new Date(`${data.bookingDate}T${data.endTime}:00`)
+      // Use utility function to combine date and time
+      const startDatetime = combineDateAndTime(data.bookingDate, data.startTime)
+      const endDatetime = combineDateAndTime(data.bookingDate, data.endTime)
 
       const requestData = {
         roomId: data.roomId,
@@ -180,22 +116,8 @@ export default function BookingModal({
         refreshmentNote: data.refreshmentNote,
       }
 
-      console.log('Creating booking with data:', requestData)
-
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error('Booking creation failed:', errorData)
-        throw new Error(errorData.message || errorData.error || 'Failed to create booking')
-      }
-
+      // Use hook method instead of direct fetch
+      await createBooking(requestData)
       onBookingCreated()
       handleClose()
     } catch (error) {

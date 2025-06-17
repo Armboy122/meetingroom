@@ -10,6 +10,8 @@ import { useRoomClosures } from '@/hooks/useRoomClosures'
 import { generateTimeSlots } from '@/lib/utils/time'
 import { getStatusColor, getStatusBadgeColor, getStatusText } from '@/lib/utils/booking'
 import { CalendarProps, Booking } from '@/types'
+import { LoadingState } from '@/components/ui/loading'
+import { ErrorBoundary } from '@/components/error/ErrorBoundary'
 
 export default function BookingCalendar({ selectedDate, onTimeSlotClick }: CalendarProps) {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -77,11 +79,11 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Calen
   }
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>
+    return <LoadingState message="กำลังโหลดข้อมูลการจอง..." />
   }
 
   return (
-    <>
+    <ErrorBoundary>
       {/* Legend */}
       <div className="mb-4 p-4 bg-gray-50 rounded-lg">
         <h3 className="text-sm font-semibold mb-2">สถานะการจอง:</h3>
@@ -209,6 +211,6 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Calen
         }}
         onUpdate={handleBookingUpdate}
       />
-    </>
+    </ErrorBoundary>
   )
 }
