@@ -30,12 +30,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         room: true,
-        organizer: {
-          include: {
-            department: true,
-            division: true
-          }
-        },
+        organizer: true,
         participants: true
       },
       orderBy: {

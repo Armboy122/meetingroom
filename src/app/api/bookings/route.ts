@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       where: whereClause,
       include: {
         room: true,
+        organizer: true,
         participants: true
       },
       orderBy: {

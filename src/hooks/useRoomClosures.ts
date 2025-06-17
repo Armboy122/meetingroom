@@ -74,6 +74,48 @@ export const useRoomClosures = (options: UseRoomClosuresOptions = {}) => {
     }
   }, [fetchClosures])
 
+  const updateClosure = useCallback(async (closureId: string, closureData: any) => {
+    try {
+      const response = await fetch(`/api/room-closures/${closureId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(closureData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || errorData.error || 'Failed to update room closure')
+      }
+
+      const updatedClosure = await response.json()
+      await fetchClosures() // Refresh closures after update
+      return updatedClosure
+    } catch (error) {
+      console.error('Error updating room closure:', error)
+      throw error
+    }
+  }, [fetchClosures])
+
+  const deleteClosure = useCallback(async (closureId: string) => {
+    try {
+      const response = await fetch(`/api/room-closures/${closureId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || errorData.error || 'Failed to delete room closure')
+      }
+
+      await fetchClosures() // Refresh closures after deletion
+    } catch (error) {
+      console.error('Error deleting room closure:', error)
+      throw error
+    }
+  }, [fetchClosures])
+
   // Helper functions for closure logic
   const isSlotClosed = useCallback((roomId: number, slotTime: Date) => {
     return closures.some(closure => {
@@ -98,6 +140,8 @@ export const useRoomClosures = (options: UseRoomClosuresOptions = {}) => {
     ...loadingState,
     refetch: fetchClosures,
     createClosure,
+    updateClosure,
+    deleteClosure,
     isSlotClosed,
     getClosureForSlot,
   }

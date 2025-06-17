@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { AdminHeader } from '@/components/admin/shared/AdminHeader'
 import { AdminTabNavigation, type AdminTab } from '@/components/admin/shared/AdminTabNavigation'
 import { RoomSection } from '@/components/admin/sections/RoomSection'
+import { RoomClosureSection } from '@/components/admin/sections/RoomClosureSection'
+import { UserSection } from '@/components/admin/sections/UserSection'
 import { LoadingState } from '@/components/ui/loading'
 import { ErrorBoundary } from '@/components/error'
 
@@ -25,9 +27,9 @@ export default function NewSettingsPage() {
       case 'departments':
         return <div className="text-center py-12">จัดการแผนก - Coming Soon</div>
       case 'users':
-        return <div className="text-center py-12">จัดการผู้ใช้ - Coming Soon</div>
+        return <UserSection />
       case 'room-closures':
-        return <div className="text-center py-12">จัดการการปิดห้อง - Coming Soon</div>
+        return <RoomClosureSection />
       default:
         return <div className="text-center py-12">เลือกแท็บเพื่อดูเนื้อหา</div>
     }

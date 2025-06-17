@@ -12,6 +12,7 @@ import { getStatusColor, getStatusBadgeColor, getStatusText } from '@/lib/utils/
 import { CalendarProps, Booking } from '@/types'
 import { LoadingState } from '@/components/ui/loading'
 import { ErrorBoundary } from '@/components/error/ErrorBoundary'
+import { showErrorPopup } from '@/components/ui/popup'
 
 export default function BookingCalendar({ selectedDate, onTimeSlotClick }: CalendarProps) {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -49,7 +50,7 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Calen
     
     if (closure) {
       // คลิกที่ช่วงเวลาที่ปิดห้อง - แสดงข้อความ
-      alert(`ห้องนี้ถูกปิดการใช้งาน\nเหตุผล: ${closure.reason}`)
+      showErrorPopup('ห้องถูกปิดการใช้งาน', `เหตุผล: ${closure.reason}`)
       return
     }
     

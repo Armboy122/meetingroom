@@ -10,6 +10,7 @@ import { InlineError } from '@/components/error'
 import { useRooms } from '@/hooks/useRooms'
 import { Plus, Edit, Trash2, Monitor } from 'lucide-react'
 import { Room } from '@/types'
+import { showErrorPopup, showConfirmPopup } from '@/components/ui/popup'
 
 interface RoomFormData {
   roomName: string
@@ -75,13 +76,17 @@ export function RoomSection() {
   }
 
   const handleDelete = async (room: Room) => {
-    if (window.confirm(`ต้องการลบห้อง "${room.roomName}" หรือไม่?`)) {
-      try {
-        await deleteRoom(room.roomId)
-      } catch (error) {
-        alert(error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการลบ')
+    showConfirmPopup(
+      'ยืนยันการลบ',
+      `ต้องการลบห้อง "${room.roomName}" หรือไม่?`,
+      async () => {
+        try {
+          await deleteRoom(room.roomId)
+        } catch (error) {
+          showErrorPopup('เกิดข้อผิดพลาด', error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการลบ')
+        }
       }
-    }
+    )
   }
 
   if (loading) {

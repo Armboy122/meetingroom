@@ -15,92 +15,28 @@ async function main() {
     }
   })
 
-  // Seed Divisions
-  const divisions = [
-    { divisionName: 'กองบริหารและสนับสนุน' },
-    { divisionName: 'กองเทคโนโลยีสารสนเทศ' },
-    { divisionName: 'กองการเงินและบัญชี' },
-    { divisionName: 'กองทรัพยากรบุคคล' },
-    { divisionName: 'กองปฏิบัติการ' }
-  ]
-
-  const createdDivisions = []
-  for (const division of divisions) {
-    const existingDiv = await prisma.division.findFirst({
-      where: { divisionName: division.divisionName }
-    })
-    
-    const div = existingDiv || await prisma.division.create({
-      data: division
-    })
-    createdDivisions.push(div)
-  }
-
-  // Seed Departments
-  const departments = [
-    { departmentName: 'แผนกบริหารงานทั่วไป', divisionName: 'กองบริหารและสนับสนุน' },
-    { departmentName: 'แผนกการเงิน', divisionName: 'กองบริหารและสนับสนุน' },
-    { departmentName: 'แผนกพัสดุและครุภัณฑ์', divisionName: 'กองบริหารและสนับสนุน' },
-    
-    { departmentName: 'แผนกพัฒนาระบบ', divisionName: 'กองเทคโนโลยีสารสนเทศ' },
-    { departmentName: 'แผนกสนับสนุนเทคโนโลยี', divisionName: 'กองเทคโนโลยีสารสนเทศ' },
-    { departmentName: 'แผนกความปลอดภัยไซเบอร์', divisionName: 'กองเทคโนโลยีสารสนเทศ' },
-    
-    { departmentName: 'แผนกบัญชี', divisionName: 'กองการเงินและบัญชี' },
-    { departmentName: 'แผนกงบประมาณ', divisionName: 'กองการเงินและบัญชี' },
-    
-    { departmentName: 'แผนกสรรหาและบรรจุ', divisionName: 'กองทรัพยากรบุคคล' },
-    { departmentName: 'แผนกพัฒนาบุคลากร', divisionName: 'กองทรัพยากรบุคคล' },
-    
-    { departmentName: 'แผนกปฏิบัติการภาคเหนือ', divisionName: 'กองปฏิบัติการ' },
-    { departmentName: 'แผนกปฏิบัติการภาคใต้', divisionName: 'กองปฏิบัติการ' }
-  ]
-
-  const createdDepartments = []
-  for (const dept of departments) {
-    const division = createdDivisions.find(d => d.divisionName === dept.divisionName)
-    if (division) {
-      const existingDept = await prisma.department.findFirst({
-        where: {
-          departmentName: dept.departmentName,
-          divisionId: division.divisionId
-        }
-      })
-      
-      const department = existingDept || await prisma.department.create({
-        data: {
-          departmentName: dept.departmentName,
-          divisionId: division.divisionId
-        }
-      })
-      createdDepartments.push(department)
-    }
-  }
-
-  // Seed Sample Users
+  // Seed Sample Users with new simplified structure
   const users = [
-    { employeeId: 'EMP001', fullName: 'สมชาย ใจดี', departmentName: 'แผนกบริหารงานทั่วไป', email: 'somchai@company.com' },
-    { employeeId: 'EMP002', fullName: 'สมหญิง รักษ์ดี', departmentName: 'แผนกพัฒนาระบบ', email: 'somying@company.com' },
-    { employeeId: 'EMP003', fullName: 'วิชัย เก่งกาจ', departmentName: 'แผนกบัญชี', email: 'vichai@company.com' },
-    { employeeId: 'EMP004', fullName: 'มาลี สวยงาม', departmentName: 'แผนกสรรหาและบรรจุ', email: 'malee@company.com' },
-    { employeeId: 'EMP005', fullName: 'ประยุทธ์ มั่นคง', departmentName: 'แผนกปฏิบัติการภาคเหนือ', email: 'prayuth@company.com' }
+    { employeeId: '331980', fullName: 'นายสำราญ ขุนฤทธิ์', position: 'ผู้ช่วยผู้ว่าการ', department: 'ผชก.(ต3)/สชก.(ต3)', email: 'samran@company.com' },
+    { employeeId: 'EMP001', fullName: 'สมชาย ใจดี', position: 'นักวิเคราะห์', department: 'แผนกบริหารงานทั่วไป', email: 'somchai@company.com' },
+    { employeeId: 'EMP002', fullName: 'สมหญิง รักษ์ดี', position: 'นักพัฒนาระบบ', department: 'แผนกพัฒนาระบบ', email: 'somying@company.com' },
+    { employeeId: 'EMP003', fullName: 'วิชัย เก่งกาจ', position: 'นักบัญชี', department: 'แผนกบัญชี', email: 'vichai@company.com' },
+    { employeeId: 'EMP004', fullName: 'มาลี สวยงาม', position: 'นักทรัพยากรบุคคล', department: 'แผนกสรรหาและบรรจุ', email: 'malee@company.com' },
+    { employeeId: 'EMP005', fullName: 'ประยุทธ์ มั่นคง', position: 'หัวหน้าปฏิบัติการ', department: 'แผนกปฏิบัติการภาคเหนือ', email: 'prayuth@company.com' }
   ]
 
   for (const user of users) {
-    const department = createdDepartments.find(d => d.departmentName === user.departmentName)
-    if (department) {
-      await prisma.user.upsert({
-        where: { employeeId: user.employeeId },
-        update: {},
-        create: {
-          employeeId: user.employeeId,
-          fullName: user.fullName,
-          departmentId: department.departmentId,
-          divisionId: department.divisionId,
-          email: user.email
-        }
-      })
-    }
+    await prisma.user.upsert({
+      where: { employeeId: user.employeeId },
+      update: {},
+      create: {
+        employeeId: user.employeeId,
+        fullName: user.fullName,
+        position: user.position,
+        department: user.department,
+        email: user.email
+      }
+    })
   }
 
   // Seed Meeting Rooms

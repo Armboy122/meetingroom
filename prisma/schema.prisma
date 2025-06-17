@@ -45,43 +45,17 @@ model Booking {
   @@map("bookings")
 }
 
-model Division {
-  divisionId   String       @id @default(cuid()) @map("division_id")
-  divisionName String       @map("division_name") @db.VarChar(100)
-  status       String       @default("active") @db.VarChar(20)
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
-  departments  Department[]
-  users        User[]
-
-  @@map("divisions")
-}
-
-model Department {
-  departmentId   String   @id @default(cuid()) @map("department_id")
-  departmentName String   @map("department_name") @db.VarChar(100)
-  divisionId     String   @map("division_id")
-  status         String   @default("active") @db.VarChar(20)
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-  division       Division @relation(fields: [divisionId], references: [divisionId])
-  users          User[]
-
-  @@map("departments")
-}
 
 model User {
-  userId       String      @id @default(cuid()) @map("user_id")
-  employeeId   String      @unique @map("employee_id") @db.VarChar(20)
-  fullName     String      @map("full_name") @db.VarChar(100)
-  departmentId String      @map("department_id")
-  divisionId   String      @map("division_id")
-  email        String?     @db.VarChar(150)
-  status       String      @default("active") @db.VarChar(20)
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  department   Department  @relation(fields: [departmentId], references: [departmentId])
-  division     Division    @relation(fields: [divisionId], references: [divisionId])
+  userId       String    @id @default(cuid()) @map("user_id")
+  employeeId   String    @unique @map("employee_id") @db.VarChar(20)
+  fullName     String    @map("full_name") @db.VarChar(100)
+  position     String?   @map("position") @db.VarChar(150)
+  department   String?   @map("department") @db.VarChar(150)
+  email        String?   @db.VarChar(150)
+  status       String    @default("active") @db.VarChar(20)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
   bookings     Booking[]
 
   @@map("users")

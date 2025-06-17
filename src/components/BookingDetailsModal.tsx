@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Users, Clock, Calendar, User, Edit, Trash2, Lock, Eye, EyeOff } from 'lucide-react'
 import { ParticipantManager } from './ParticipantManager'
+import { showErrorPopup, showConfirmPopup } from '@/components/ui/popup'
 
 interface Booking {
   bookingId: number
@@ -26,6 +27,12 @@ interface Booking {
   endTime: string
   description?: string
   createdBy: string
+  organizer?: {
+    userId: string
+    employeeId: string
+    fullName: string
+    email?: string
+  }
   participants: Array<{
     participantName: string
   }>
@@ -139,34 +146,36 @@ export default function BookingDetailsModal({
     const adminPassword = prompt('กรุณาใส่รหัสผ่าน Admin เพื่อลบการจอง:')
     
     if (adminPassword !== 'Armoff122*') {
-      alert('รหัสผ่าน Admin ไม่ถูกต้อง')
+      showErrorPopup('รหัสผ่านไม่ถูกต้อง', 'รหัสผ่าน Admin ไม่ถูกต้อง')
       return
     }
 
-    if (!confirm('คุณแน่ใจหรือไม่ที่จะลบการจองนี้?')) {
-      return
-    }
+    showConfirmPopup(
+      'ยืนยันการลบ',
+      'คุณแน่ใจหรือไม่ที่จะลบการจองนี้?',
+      async () => {
+        setIsLoading(true)
+        setError(null)
 
-    setIsLoading(true)
-    setError(null)
+        try {
+          const response = await fetch(`/api/bookings/${booking.bookingId}`, {
+            method: 'DELETE',
+          })
 
-    try {
-      const response = await fetch(`/api/bookings/${booking.bookingId}`, {
-        method: 'DELETE',
-      })
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || 'เกิดข้อผิดพลาดในการลบ')
+          }
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'เกิดข้อผิดพลาดในการลบ')
+          onUpdate()
+          handleClose()
+        } catch (error) {
+          setError(error instanceof Error ? error.message : 'เกิดข้อผิดพลาด')
+        } finally {
+          setIsLoading(false)
+        }
       }
-
-      onUpdate()
-      handleClose()
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'เกิดข้อผิดพลาด')
-    } finally {
-      setIsLoading(false)
-    }
+    )
   }
 
   if (!booking) return null
@@ -200,7 +209,7 @@ export default function BookingDetailsModal({
                   <Label className="text-sm font-medium text-gray-500">ผู้จอง</Label>
                   <p className="flex items-center gap-2">
                     <User className="w-4 h-4" />
-                    {booking.createdBy}
+                    {booking.organizer?.fullName || booking.createdBy || 'ไม่ระบุ'}
                   </p>
                 </div>
               </div>
