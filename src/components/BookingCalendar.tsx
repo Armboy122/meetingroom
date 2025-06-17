@@ -29,6 +29,16 @@ interface Booking {
   }>
 }
 
+interface RoomClosure {
+  closureId: string
+  roomId: number
+  startDatetime: string
+  endDatetime: string
+  reason: string
+  createdBy: string
+  room: Room
+}
+
 interface BookingCalendarProps {
   selectedDate: Date
   onTimeSlotClick: (roomId: number, startTime: Date, endTime: Date) => void
@@ -37,6 +47,7 @@ interface BookingCalendarProps {
 export default function BookingCalendar({ selectedDate, onTimeSlotClick }: BookingCalendarProps) {
   const [rooms, setRooms] = useState<Room[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [closures, setClosures] = useState<RoomClosure[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
@@ -61,16 +72,19 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
 
   const fetchRoomsAndBookings = async () => {
     try {
-      const [roomsResponse, bookingsResponse] = await Promise.all([
+      const [roomsResponse, bookingsResponse, closuresResponse] = await Promise.all([
         fetch('/api/rooms'),
-        fetch(`/api/bookings?date=${format(selectedDate, 'yyyy-MM-dd')}`)
+        fetch(`/api/bookings?date=${format(selectedDate, 'yyyy-MM-dd')}`),
+        fetch(`/api/room-closures?date=${format(selectedDate, 'yyyy-MM-dd')}`)
       ])
 
       const roomsData = await roomsResponse.json()
       const bookingsData = await bookingsResponse.json()
+      const closuresData = await closuresResponse.json()
 
       setRooms(roomsData)
       setBookings(bookingsData)
+      setClosures(closuresData)
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -87,6 +101,24 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
     })
   }
 
+  const isSlotClosed = (roomId: number, slotTime: Date) => {
+    return closures.some(closure => {
+      if (closure.roomId !== roomId) return false
+      const closureStart = new Date(closure.startDatetime)
+      const closureEnd = new Date(closure.endDatetime)
+      return slotTime >= closureStart && slotTime < closureEnd
+    })
+  }
+
+  const getClosureForSlot = (roomId: number, slotTime: Date) => {
+    return closures.find(closure => {
+      if (closure.roomId !== roomId) return false
+      const closureStart = new Date(closure.startDatetime)
+      const closureEnd = new Date(closure.endDatetime)
+      return slotTime >= closureStart && slotTime < closureEnd
+    })
+  }
+
   const getBookingForSlot = (roomId: number, slotTime: Date) => {
     return bookings.find(booking => {
       if (booking.roomId !== roomId) return false
@@ -98,6 +130,13 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
 
   const handleSlotClick = async (roomId: number, slotTime: Date) => {
     const booking = getBookingForSlot(roomId, slotTime)
+    const closure = getClosureForSlot(roomId, slotTime)
+    
+    if (closure) {
+      // คลิกที่ช่วงเวลาที่ปิดห้อง - แสดงข้อความ
+      alert(`ห้องนี้ถูกปิดการใช้งาน\nเหตุผล: ${closure.reason}`)
+      return
+    }
     
     if (booking) {
       // คลิกที่ช่วงเวลาที่มีการจอง - แสดงรายละเอียด
@@ -147,8 +186,8 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
             <span>อนุมัติแล้ว</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gray-100 border rounded"></div>
-            <span>ถูกปฏิเสธ</span>
+            <div className="w-4 h-4 bg-gray-400 border rounded"></div>
+            <span>ปิดการใช้งาน</span>
           </div>
         </div>
       </div>
@@ -176,8 +215,11 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
 
                 {timeSlots.map((slot, slotIndex) => {
                   const isBooked = isSlotBooked(room.roomId, slot)
+                  const isClosed = isSlotClosed(room.roomId, slot)
                   const booking = getBookingForSlot(room.roomId, slot)
+                  const closure = getClosureForSlot(room.roomId, slot)
                   const isBookingStart = booking && isSameMinute(new Date(booking.startDatetime), slot)
+                  const isClosureStart = closure && isSameMinute(new Date(closure.startDatetime), slot)
 
                   // กำหนดสีตามสถานะการจอง
                   const getStatusColor = (status: string) => {
@@ -219,18 +261,38 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
                     }
                   }
 
+                  // กำหนดสีและ title สำหรับช่วงเวลา
+                  let slotColor = 'bg-green-50 hover:bg-green-100'
+                  let slotTitle = 'คลิกเพื่อจองห้องประชุม'
+                  
+                  if (isClosed) {
+                    slotColor = 'bg-gray-400 hover:bg-gray-500'
+                    slotTitle = 'ห้องปิดการใช้งาน - คลิกเพื่อดูรายละเอียด'
+                  } else if (isBooked) {
+                    slotColor = getStatusColor(booking?.status || 'approved')
+                    slotTitle = 'คลิกเพื่อดูรายละเอียดการจอง'
+                  }
+
                   return (
                     <div
                       key={slotIndex}
-                      className={`h-12 border-b border-r cursor-pointer transition-colors ${
-                        isBooked
-                          ? getStatusColor(booking?.status || 'approved')
-                          : 'bg-green-50 hover:bg-green-100'
-                      }`}
+                      className={`h-12 border-b border-r cursor-pointer transition-colors ${slotColor}`}
                       onClick={() => handleSlotClick(room.roomId, slot)}
-                      title={isBooked ? 'คลิกเพื่อดูรายละเอียดการจอง' : 'คลิกเพื่อจองห้องประชุม'}
+                      title={slotTitle}
                     >
-                      {isBookingStart && booking && (
+                      {isClosureStart && closure && (
+                        <div className="p-1 text-xs text-white rounded m-1 bg-gray-600">
+                          <div className="font-semibold truncate">ปิดการใช้งาน</div>
+                          <div className="opacity-90 text-[10px]">
+                            {format(new Date(closure.startDatetime), 'HH:mm')} - 
+                            {format(new Date(closure.endDatetime), 'HH:mm')}
+                          </div>
+                          <div className="opacity-90 text-[10px] font-medium truncate">
+                            {closure.reason}
+                          </div>
+                        </div>
+                      )}
+                      {isBookingStart && booking && !isClosed && (
                         <div className={`p-1 text-xs text-white rounded m-1 ${getStatusBadgeColor(booking.status)}`}>
                           <div className="font-semibold truncate">{booking.title}</div>
                           <div className="opacity-90 text-[10px]">

@@ -8,13 +8,14 @@ datasource db {
 }
 
 model Room {
-  roomId      Int       @id @default(autoincrement()) @map("room_id")
-  roomName    String    @map("room_name") @db.VarChar(100)
-  capacity    Int       @default(10)
+  roomId      Int           @id @default(autoincrement()) @map("room_id")
+  roomName    String        @map("room_name") @db.VarChar(100)
+  capacity    Int           @default(10)
   equipment   String?
-  status      String    @default("active") @db.VarChar(20)
-  createdAt   DateTime  @default(now()) @map("created_at")
+  status      String        @default("active") @db.VarChar(20)
+  createdAt   DateTime      @default(now()) @map("created_at")
   bookings    Booking[]
+  closures    RoomClosure[]
 
   @@map("rooms")
 }
@@ -104,4 +105,18 @@ model Participant {
   booking          Booking  @relation(fields: [bookingId], references: [bookingId], onDelete: Cascade)
 
   @@map("participants")
+}
+
+model RoomClosure {
+  closureId     String   @id @default(cuid()) @map("closure_id")
+  roomId        Int      @map("room_id")
+  startDatetime DateTime @map("start_datetime")
+  endDatetime   DateTime @map("end_datetime")
+  reason        String   @db.VarChar(255)
+  createdBy     String   @map("created_by") @db.VarChar(100)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  room          Room     @relation(fields: [roomId], references: [roomId])
+
+  @@map("room_closures")
 }
