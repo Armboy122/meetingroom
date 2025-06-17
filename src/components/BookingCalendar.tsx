@@ -1,132 +1,45 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { format, startOfDay, addMinutes, isSameMinute } from 'date-fns'
+import { useState, useMemo } from 'react'
+import { format, addMinutes, isSameMinute } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import BookingDetailsModal from './BookingDetailsModal'
+import { useRooms } from '@/hooks/useRooms'
+import { useBookings } from '@/hooks/useBookings'
+import { useRoomClosures } from '@/hooks/useRoomClosures'
+import { generateTimeSlots } from '@/lib/utils/time'
+import { getStatusColor, getStatusBadgeColor, getStatusText } from '@/lib/utils/booking'
+import { CalendarProps, Booking } from '@/types'
 
-interface Room {
-  roomId: number
-  roomName: string
-  capacity: number
-  equipment?: string
-  status: string
-}
-
-interface Booking {
-  bookingId: number
-  roomId: number
-  title: string
-  startDatetime: string
-  endDatetime: string
-  status: string
-  room: Room
-  bookingTitle?: string
-  description?: string
-  createdBy?: string
-  participants?: Array<{
-    participantName: string
-  }>
-}
-
-interface RoomClosure {
-  closureId: string
-  roomId: number
-  startDatetime: string
-  endDatetime: string
-  reason: string
-  createdBy: string
-  room: Room
-}
-
-interface BookingCalendarProps {
-  selectedDate: Date
-  onTimeSlotClick: (roomId: number, startTime: Date, endTime: Date) => void
-}
-
-export default function BookingCalendar({ selectedDate, onTimeSlotClick }: BookingCalendarProps) {
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [closures, setClosures] = useState<RoomClosure[]>([])
-  const [loading, setLoading] = useState(true)
+export default function BookingCalendar({ selectedDate, onTimeSlotClick }: CalendarProps) {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
 
-  const startHour = 8
-  const endHour = 18
-  const slotDuration = 30
+  // Use custom hooks for data fetching
+  const { rooms, loading: roomsLoading } = useRooms()
+  const { 
+    bookings, 
+    loading: bookingsLoading, 
+    isSlotBooked, 
+    getBookingForSlot 
+  } = useBookings({ 
+    date: selectedDate, 
+    autoRefresh: true,
+    refreshInterval: 30000 
+  })
+  const { 
+    closures, 
+    loading: closuresLoading, 
+    isSlotClosed, 
+    getClosureForSlot 
+  } = useRoomClosures({ date: selectedDate })
 
-  const timeSlots: Date[] = []
-  for (let hour = startHour; hour < endHour; hour++) {
-    for (let minute = 0; minute < 60; minute += slotDuration) {
-      timeSlots.push(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), hour, minute))
-    }
-  }
-
-  useEffect(() => {
-    fetchRoomsAndBookings()
-    const interval = setInterval(fetchRoomsAndBookings, 30000)
-    return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Memoize time slots calculation
+  const timeSlots = useMemo(() => {
+    return generateTimeSlots(8, 18, 30, selectedDate)
   }, [selectedDate])
 
-  const fetchRoomsAndBookings = async () => {
-    try {
-      const [roomsResponse, bookingsResponse, closuresResponse] = await Promise.all([
-        fetch('/api/rooms'),
-        fetch(`/api/bookings?date=${format(selectedDate, 'yyyy-MM-dd')}`),
-        fetch(`/api/room-closures?date=${format(selectedDate, 'yyyy-MM-dd')}`)
-      ])
-
-      const roomsData = await roomsResponse.json()
-      const bookingsData = await bookingsResponse.json()
-      const closuresData = await closuresResponse.json()
-
-      setRooms(roomsData)
-      setBookings(bookingsData)
-      setClosures(closuresData)
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const isSlotBooked = (roomId: number, slotTime: Date) => {
-    return bookings.some(booking => {
-      if (booking.roomId !== roomId) return false
-      const bookingStart = new Date(booking.startDatetime)
-      const bookingEnd = new Date(booking.endDatetime)
-      return slotTime >= bookingStart && slotTime < bookingEnd
-    })
-  }
-
-  const isSlotClosed = (roomId: number, slotTime: Date) => {
-    return closures.some(closure => {
-      if (closure.roomId !== roomId) return false
-      const closureStart = new Date(closure.startDatetime)
-      const closureEnd = new Date(closure.endDatetime)
-      return slotTime >= closureStart && slotTime < closureEnd
-    })
-  }
-
-  const getClosureForSlot = (roomId: number, slotTime: Date) => {
-    return closures.find(closure => {
-      if (closure.roomId !== roomId) return false
-      const closureStart = new Date(closure.startDatetime)
-      const closureEnd = new Date(closure.endDatetime)
-      return slotTime >= closureStart && slotTime < closureEnd
-    })
-  }
-
-  const getBookingForSlot = (roomId: number, slotTime: Date) => {
-    return bookings.find(booking => {
-      if (booking.roomId !== roomId) return false
-      const bookingStart = new Date(booking.startDatetime)
-      const bookingEnd = new Date(booking.endDatetime)
-      return slotTime >= bookingStart && slotTime < bookingEnd
-    })
-  }
+  const loading = roomsLoading || bookingsLoading || closuresLoading
 
   const handleSlotClick = async (roomId: number, slotTime: Date) => {
     const booking = getBookingForSlot(roomId, slotTime)
@@ -152,13 +65,13 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
       }
     } else {
       // คลิกที่ช่วงเวลาว่าง - สร้างการจองใหม่
-      const endTime = addMinutes(slotTime, slotDuration)
+      const endTime = addMinutes(slotTime, 30) // 30 minutes slot duration
       onTimeSlotClick(roomId, slotTime, endTime)
     }
   }
 
   const handleBookingUpdate = () => {
-    fetchRoomsAndBookings()
+    // Hooks will automatically refetch when needed
     setShowDetailsModal(false)
     setSelectedBooking(null)
   }
@@ -221,46 +134,6 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
                   const isBookingStart = booking && isSameMinute(new Date(booking.startDatetime), slot)
                   const isClosureStart = closure && isSameMinute(new Date(closure.startDatetime), slot)
 
-                  // กำหนดสีตามสถานะการจอง
-                  const getStatusColor = (status: string) => {
-                    switch (status) {
-                      case 'pending':
-                        return 'bg-yellow-100 hover:bg-yellow-200'
-                      case 'approved':
-                        return 'bg-red-100 hover:bg-red-200'
-                      case 'rejected':
-                        return 'bg-gray-100 hover:bg-gray-200'
-                      default:
-                        return 'bg-red-100 hover:bg-red-200'
-                    }
-                  }
-
-                  const getStatusBadgeColor = (status: string) => {
-                    switch (status) {
-                      case 'pending':
-                        return 'bg-yellow-500 hover:bg-yellow-600'
-                      case 'approved':
-                        return 'bg-red-500 hover:bg-red-600'
-                      case 'rejected':
-                        return 'bg-gray-500 hover:bg-gray-600'
-                      default:
-                        return 'bg-red-500 hover:bg-red-600'
-                    }
-                  }
-
-                  const getStatusText = (status: string) => {
-                    switch (status) {
-                      case 'pending':
-                        return 'รอการอนุมัติ'
-                      case 'approved':
-                        return 'อนุมัติแล้ว'
-                      case 'rejected':
-                        return 'ถูกปฏิเสธ'
-                      default:
-                        return status
-                    }
-                  }
-
                   // กำหนดสีและ title สำหรับช่วงเวลา
                   let slotColor = 'bg-green-50 hover:bg-green-100'
                   let slotTitle = 'คลิกเพื่อจองห้องประชุม'
@@ -269,7 +142,7 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
                     slotColor = 'bg-gray-400 hover:bg-gray-500'
                     slotTitle = 'ห้องปิดการใช้งาน - คลิกเพื่อดูรายละเอียด'
                   } else if (isBooked) {
-                    slotColor = getStatusColor(booking?.status || 'approved')
+                    slotColor = getStatusColor(booking?.status as any || 'approved')
                     slotTitle = 'คลิกเพื่อดูรายละเอียดการจอง'
                   }
 
@@ -293,14 +166,14 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
                         </div>
                       )}
                       {isBookingStart && booking && !isClosed && (
-                        <div className={`p-1 text-xs text-white rounded m-1 ${getStatusBadgeColor(booking.status)}`}>
+                        <div className={`p-1 text-xs text-white rounded m-1 ${getStatusBadgeColor(booking.status as any)}`}>
                           <div className="font-semibold truncate">{booking.title}</div>
                           <div className="opacity-90 text-[10px]">
                             {format(new Date(booking.startDatetime), 'HH:mm')} - 
                             {format(new Date(booking.endDatetime), 'HH:mm')}
                           </div>
                           <div className="opacity-90 text-[10px] font-medium">
-                            {getStatusText(booking.status)}
+                            {getStatusText(booking.status as any)}
                           </div>
                         </div>
                       )}
@@ -315,18 +188,18 @@ export default function BookingCalendar({ selectedDate, onTimeSlotClick }: Booki
 
       <BookingDetailsModal
         booking={selectedBooking ? {
-          bookingId: selectedBooking.bookingId,
-          bookingTitle: selectedBooking.bookingTitle || selectedBooking.title,
+          bookingId: parseInt(selectedBooking.bookingId) || 0,
+          bookingTitle: selectedBooking.title,
           startTime: selectedBooking.startDatetime,
           endTime: selectedBooking.endDatetime,
           description: selectedBooking.description,
           createdBy: selectedBooking.createdBy || 'ไม่ระบุ',
           participants: selectedBooking.participants || [],
           room: {
-            roomId: selectedBooking.room.roomId,
-            roomName: selectedBooking.room.roomName,
-            capacity: selectedBooking.room.capacity,
-            equipment: selectedBooking.room.equipment ? [selectedBooking.room.equipment] : []
+            roomId: selectedBooking.room?.roomId || 0,
+            roomName: selectedBooking.room?.roomName || '',
+            capacity: selectedBooking.room?.capacity || 0,
+            equipment: selectedBooking.room?.equipment ? [selectedBooking.room.equipment] : []
           }
         } : null}
         isOpen={showDetailsModal}
